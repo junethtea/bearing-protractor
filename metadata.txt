@@ -1,0 +1,26 @@
+[general]
+name=Bearing Protractor
+qgisMinimumVersion=3.4
+description=Interactive floating protractor and advanced azimuth/distance measurement tool for RF Site Audit and Network Planning.
+version=3.9.0
+author=Jujun Junaedi
+email=jujun.junaedi@outlook.com
+license=GPL-2.0-or-later
+about=Bearing Protractor is a must-have interactive floating tool for QGIS users, particularly in the Telecommunications, RF Engineering, and GIS planning sectors. It provides an on-screen, draggable protractor overlay designed to speed up cell planning and azimuth audits. Key features include:
+    * Dynamic Multiple Bearings: Create and drag multiple sector antennas (needles) to simulate coverage direction and beamwidth.
+    * Real-Time Distance Tracking: Automatically calculates real-world distances (Meters/Km) dynamically based on the map canvas CRS and scale.
+    * Manual Measurement Ruler: Double-click to draw a temporary line to instantly check the azimuth and distance to neighbor sites.
+    * Persistent Settings: All visual customizations (ring size, colors, fonts, sector counts) are automatically saved across QGIS sessions.
+    * Bilingual Support & Clean UI: Seamlessly switch between English and Indonesian, featuring an unobtrusive, transparent interface that doesn't block map visibility.
+    Whether you are verifying physical tuning, doing site audits, or planning new macro cells, this tool replaces traditional static measurement plugins with a fluid, visual experience.
+tracker=https://github.com/junethtea/bearing-protractor/issues
+repository=https://github.com/junethtea/bearing-protractor
+homepage=https://github.com/junethtea/bearing-protractor
+tags=azimuth, bearing, protractor, rf engineer, telecommunications, site audit, cell planning, distance, measurement, tools
+category=Vector
+icon=icon.png
+experimental=False
+changelog=
+    3.9.0 - Stable Release: Added real-world distance tracking (m/km) utilizing QgsDistanceArea, bilingual Help menu (EN/ID), and dynamic label offsets. PEP-8 code refactoring.
+    3.8.0 - Added persistent settings (auto-save) for visual customization, ring thickness, and sector beamwidth adjustments.
+    3.0.0 - Initial floating widget implementation with mouse-wheel resizing and dynamic sector arms.
