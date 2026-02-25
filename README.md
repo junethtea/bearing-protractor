@@ -42,23 +42,23 @@ This plugin is highly recommended for:
 
 ## 📸 Screenshots
 
-1.Bearing Protractor Overview
+**1.Bearing Protractor Overview**
 
 <img width="526" height="387" alt="Bearing" src="https://github.com/user-attachments/assets/c2fb2510-fef3-4542-8967-917578079a17" />
 
-2.Menu Setting
+**2.Menu Settings**
 
 <img width="525" height="387" alt="Menu Seting" src="https://github.com/user-attachments/assets/10039ba5-8ba9-43cd-a09c-5a42f82a8680" />
 
-3.Bearing Setting
+**3.Bearing Settings**
 
 <img width="526" height="385" alt="Bearing Menu" src="https://github.com/user-attachments/assets/f2efa3f4-f04e-4236-b674-9e141a61b431" />
 
-4.Visual Setting
+**4.Visual Setting**
 
 <img width="526" height="388" alt="Visual Setting" src="https://github.com/user-attachments/assets/46c5cf7f-6405-4f38-bae9-b32af8a99562" />
 
-5.Manual Measurement Ruler
+**5.Manual Measurement Ruler**
 
 <img width="526" height="388" alt="Manual ruler" src="https://github.com/user-attachments/assets/5417b8cd-e074-4c1f-9da4-3549b765ccf0" />
 
