@@ -21,6 +21,7 @@ category=Vector
 icon=icon.png
 experimental=False
 changelog=
-    3.9.0 - Stable Release: Added real-world distance tracking (m/km) utilizing QgsDistanceArea, bilingual Help menu (EN/ID), and dynamic label offsets. PEP-8 code refactoring.
+    3.9.0 - Stable Release: Added real-world distance tracking (m/km) utilizing QgsDistanceArea, bilingual Help menu (EN/ID), and dynamic label offsets.
     3.8.0 - Added persistent settings (auto-save) for visual customization, ring thickness, and sector beamwidth adjustments.
+
     3.0.0 - Initial floating widget implementation with mouse-wheel resizing and dynamic sector arms.
