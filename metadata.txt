@@ -2,7 +2,7 @@
 name=Bearing Protractor
 qgisMinimumVersion=3.4
 description=Interactive floating protractor and advanced azimuth/distance measurement tool for RF Site Audit and Network Planning.
-version=3.9.0
+version=3.9.1
 author=Jujun Junaedi
 email=jujun.junaedi@outlook.com
 license=GPL-2.0-or-later
@@ -21,7 +21,7 @@ category=Vector
 icon=icon.png
 experimental=False
 changelog=
+    3.9.1 - Added 4 new visual protractor styles (4 Markers, Spider Web, Crosshair, Radar Rings) for better adaptability to map clutter. Fixed widget dragging mechanism to prevent the protractor from getting stuck to the cursor or sinking outside the map canvas bounds. Adjusted measurement text offset to prevent cursor overlap.
     3.9.0 - Stable Release: Added real-world distance tracking (m/km) utilizing QgsDistanceArea, bilingual Help menu (EN/ID), and dynamic label offsets.
     3.8.0 - Added persistent settings (auto-save) for visual customization, ring thickness, and sector beamwidth adjustments.
-
     3.0.0 - Initial floating widget implementation with mouse-wheel resizing and dynamic sector arms.
