@@ -62,6 +62,13 @@ This plugin is highly recommended for:
 
 <img width="526" height="388" alt="Manual ruler" src="https://github.com/user-attachments/assets/5417b8cd-e074-4c1f-9da4-3549b765ccf0" />
 
+**6.New Style**
+
+<img width="542" height="389" alt="New" src="https://github.com/user-attachments/assets/fd32ef3c-8b65-4cdf-9d3e-27abd696c6a3" />
+
+<img width="1508" height="1080" alt="New Style" src="https://github.com/user-attachments/assets/467c2c8e-d6bb-4d92-aecd-feb587bc963e" />
+
+
 ## ☕ Support the Developer
 If this tool saves you hours of work, consider buying me a coffee to support future development! 
 * 🌍 **Global:** [Buy Me a Coffee](https://buymeacoffee.com/juneth)
