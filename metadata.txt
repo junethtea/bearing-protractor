@@ -1,8 +1,9 @@
 [general]
 name=Bearing Protractor
 qgisMinimumVersion=3.4
+qgisMaximumVersion=4.99
 description=Interactive floating protractor and advanced azimuth/distance measurement tool for RF Site Audit and Network Planning.
-version=3.9.1
+version=3.9.2
 author=Jujun Junaedi
 email=jujun.junaedi@outlook.com
 license=GPL-2.0-or-later
@@ -10,6 +11,8 @@ about=Bearing Protractor is a must-have interactive floating tool for QGIS users
     * Dynamic Multiple Bearings: Create and drag multiple sector antennas (needles) to simulate coverage direction and beamwidth.
     * Real-Time Distance Tracking: Automatically calculates real-world distances (Meters/Km) dynamically based on the map canvas CRS and scale.
     * Manual Measurement Ruler: Double-click to draw a temporary line to instantly check the azimuth and distance to neighbor sites.
+    * Cell Footprint Generation: Export current sector configurations as physical polygon vector layers (Cell_Footprint) directly to the map canvas.
+    * 1-Click Data Export: Instantly copy sector data (Azimuth, Beamwidth, Distance) to the clipboard in tabular format for easy pasting into spreadsheets or reports.
     * Persistent Settings: All visual customizations (ring size, colors, fonts, sector counts) are automatically saved across QGIS sessions.
     * Bilingual Support & Clean UI: Seamlessly switch between English and Indonesian, featuring an unobtrusive, transparent interface that doesn't block map visibility.
     Whether you are verifying physical tuning, doing site audits, or planning new macro cells, this tool replaces traditional static measurement plugins with a fluid, visual experience.
@@ -21,6 +24,7 @@ category=Vector
 icon=icon.png
 experimental=False
 changelog=
+    3.9.2 - Added QGIS 4.x (PyQt6) compatibility support. Introduced 'Export Footprint' to generate polygon vector layers representing cell coverage. Added 'Copy Data' feature for quick tabular export (Azimuth, Beamwidth, Distance) to the clipboard.
     3.9.1 - Added 4 new visual protractor styles (4 Markers, Spider Web, Crosshair, Radar Rings) for better adaptability to map clutter. Fixed widget dragging mechanism to prevent the protractor from getting stuck to the cursor or sinking outside the map canvas bounds. Adjusted measurement text offset to prevent cursor overlap.
     3.9.0 - Stable Release: Added real-world distance tracking (m/km) utilizing QgsDistanceArea, bilingual Help menu (EN/ID), and dynamic label offsets.
     3.8.0 - Added persistent settings (auto-save) for visual customization, ring thickness, and sector beamwidth adjustments.
