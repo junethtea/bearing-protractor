@@ -8,11 +8,11 @@
 #  DESCRIPTION : Floating interactive protractor for RF planning & audit, Features real-time distance tracking & multi-sector support.
 #  AUTHOR      : Jujun Junaedi
 #  EMAIL       : jujun.junaedi@outlook.com
-#  VERSION     : 3.9.1
+#  VERSION     : 3.9.2
 #  COPYRIGHT   : (c) 2024 by Jujun Junaedi
 #  LICENSE     : GPL-2.0-or-later
 #  MOTTO       : "Sebaik-baiknya Manusia adalah yang bermanfaat bagi sesama"
-# --------------------------------------------------------------------=-----
+# --------------------------------------------------------------------------
 
 """
 LICENSE AGREEMENT:
@@ -31,25 +31,44 @@ from qgis.PyQt.QtGui import (
     QPolygonF, QPainterPath
 )
 from qgis.PyQt.QtWidgets import (
-    QWidget, QMenu, QColorDialog, QInputDialog, 
-    QMessageBox, QAction
+    QWidget, QMenu, QColorDialog, QInputDialog, QMessageBox, QApplication
 )
 
+# PyQt5 / PyQt6 Compatibility Handling
+try:
+    from qgis.PyQt.QtGui import QAction
+except ImportError:
+    from qgis.PyQt.QtWidgets import QAction
+
+Qt_FramelessWindowHint = Qt.WindowType.FramelessWindowHint if hasattr(Qt, 'WindowType') else Qt.FramelessWindowHint
+Qt_Tool = Qt.WindowType.Tool if hasattr(Qt, 'WindowType') else Qt.Tool
+Qt_WA_TranslucentBackground = Qt.WidgetAttribute.WA_TranslucentBackground if hasattr(Qt, 'WidgetAttribute') else Qt.WA_TranslucentBackground
+Qt_StrongFocus = Qt.FocusPolicy.StrongFocus if hasattr(Qt, 'FocusPolicy') else Qt.StrongFocus
+Qt_Key_Escape = Qt.Key.Key_Escape if hasattr(Qt, 'Key') else Qt.Key_Escape
+Qt_LeftButton = Qt.MouseButton.LeftButton if hasattr(Qt, 'MouseButton') else Qt.LeftButton
+Qt_RightButton = Qt.MouseButton.RightButton if hasattr(Qt, 'MouseButton') else Qt.RightButton
+Qt_NoPen = Qt.PenStyle.NoPen if hasattr(Qt, 'PenStyle') else Qt.NoPen
+Qt_DashLine = Qt.PenStyle.DashLine if hasattr(Qt, 'PenStyle') else Qt.DashLine
+Qt_DotLine = Qt.PenStyle.DotLine if hasattr(Qt, 'PenStyle') else Qt.DotLine
+Qt_NoBrush = Qt.BrushStyle.NoBrush if hasattr(Qt, 'BrushStyle') else Qt.NoBrush
+Qt_CrossCursor = Qt.CursorShape.CrossCursor if hasattr(Qt, 'CursorShape') else Qt.CrossCursor
+Qt_RichText = Qt.TextFormat.RichText if hasattr(Qt, 'TextFormat') else Qt.RichText
+
+MsgBox_Info = QMessageBox.Icon.Information if hasattr(QMessageBox, 'Icon') else QMessageBox.Information
+MsgBox_Ok = QMessageBox.StandardButton.Ok if hasattr(QMessageBox, 'StandardButton') else QMessageBox.Ok
+
+QPainter_Antialiasing = QPainter.RenderHint.Antialiasing if hasattr(QPainter, 'RenderHint') else QPainter.Antialiasing
+QFont_Bold = QFont.Weight.Bold if hasattr(QFont, 'Weight') else QFont.Bold
+
 class ProtractorWidget(QWidget):
-    """
-    Main Widget Class for Bearing Protractor.
-    Handles canvas drawing, real-time tracking, and context menus.
-    """
-    
-    # Signal to communicate with the main plugin file
     request_line_creation = pyqtSignal(float)
+    request_footprint_creation = pyqtSignal(list, QPoint)
 
     def __init__(self, parent=None, canvas=None):
         super().__init__(parent)
         self.canvas = canvas
         self.settings = QgsSettings()
         
-        # Init GIS Calculation Tools
         self.da = QgsDistanceArea()
         self.da.setEllipsoid(QgsProject.instance().ellipsoid())
         self.da.setSourceCrs(
@@ -57,14 +76,12 @@ class ProtractorWidget(QWidget):
             QgsProject.instance().transformContext()
         )
 
-        # Window Configuration
-        self.setWindowFlags(Qt.FramelessWindowHint | Qt.Tool)
-        self.setAttribute(Qt.WA_TranslucentBackground)
+        self.setWindowFlags(Qt_FramelessWindowHint | Qt_Tool)
+        self.setAttribute(Qt_WA_TranslucentBackground)
         self.setMouseTracking(True)
-        self.setFocusPolicy(Qt.StrongFocus)
+        self.setFocusPolicy(Qt_StrongFocus)
         self.resize(1000, 1000)
 
-        # Localization
         self.current_lang = "ID"
         self.texts = {
             "ID": {
@@ -72,6 +89,7 @@ class ProtractorWidget(QWidget):
                 "show_labels": "Tampilkan Label", "show_beam": "Tampilkan Beamwidth", 
                 "add_new": "Tambah Bearing", "reset": "Reset Semua",
                 "set_count": "Atur Jumlah Bearing", "manual_line": "Tarik Garis Manual",
+                "copy_clipboard": "Copy Data ke Excel", "export_footprint": "Export Footprint ke Layer",
                 "style_menu": "Visual Settings", "thick_ring": "Tebal Ring", 
                 "size_font": "Ukuran Angka", "color_ring": "Warna Ring", 
                 "color_text": "Warna Teks", "lang_menu": "Bahasa / Language", 
@@ -85,6 +103,7 @@ class ProtractorWidget(QWidget):
                 "show_labels": "Show Labels", "show_beam": "Show Beamwidth", 
                 "add_new": "Add New", "reset": "Reset All",
                 "set_count": "Set Count", "manual_line": "Draw Manual Line",
+                "copy_clipboard": "Copy Data to Excel", "export_footprint": "Export Footprint to Layer",
                 "style_menu": "Visual Settings", "thick_ring": "Ring Weight", 
                 "size_font": "Font Size", "color_ring": "Ring Color", 
                 "color_text": "Text Color", "lang_menu": "Language", 
@@ -95,7 +114,6 @@ class ProtractorWidget(QWidget):
             }
         }
 
-        # Internal State
         self.arms = []
         self.show_arms = True
         self.show_bearing_labels = True
@@ -114,7 +132,6 @@ class ProtractorWidget(QWidget):
         self.load_settings()
 
     def t(self, key):
-        """Helper for translation mapping."""
         return self.texts[self.current_lang].get(key, key)
 
     def get_real_distance(self, p1_local, p2_local):
@@ -139,7 +156,6 @@ class ProtractorWidget(QWidget):
             return "0m"
 
     def get_geo_azimuth(self, target_pos):
-        """Menghitung Azimuth akurat menggunakan kordinat peta."""
         if not self.canvas:
             center = self.rect().center()
             dx = target_pos.x() - center.x()
@@ -163,9 +179,6 @@ class ProtractorWidget(QWidget):
             dy = target_pos.y() - center.y()
             return (math.degrees(math.atan2(dx, -dy)) + 360) % 360
 
-    # ========================-=================
-    # Settings Management
-    # ==========================================
     def load_settings(self):
         s = self.settings
         self.ring_radius = int(s.value("BearingProtractor/ring_radius", 150))
@@ -175,7 +188,6 @@ class ProtractorWidget(QWidget):
         self.text_color = QColor(s.value("BearingProtractor/text_color", "yellow"))
         self.text_stroke_color = QColor("black")
         self.bearing_thickness = 3
-        
         self.current_style = int(s.value("BearingProtractor/current_style", 1)) 
         
         try:
@@ -201,11 +213,8 @@ class ProtractorWidget(QWidget):
         self.save_settings()
         self.update()
 
-    # ==========================================
-    # Input Events
-    # ==============================-============
     def keyPressEvent(self, event):
-        if event.key() == Qt.Key_Escape and self.is_picking_azimuth:
+        if event.key() == Qt_Key_Escape and self.is_picking_azimuth:
             self.stop_manual_picking()
         super().keyPressEvent(event)
 
@@ -220,40 +229,46 @@ class ProtractorWidget(QWidget):
         event.accept()
 
     def mousePressEvent(self, event):
-        if event.button() == Qt.LeftButton:
+        pos = event.position().toPoint() if hasattr(event, "position") else event.pos()
+        gpos = event.globalPosition().toPoint() if hasattr(event, "globalPosition") else event.globalPos()
+        
+        if event.button() == Qt_LeftButton:
             if self.is_picking_azimuth:
-                final_azimuth = self.get_geo_azimuth(event.pos())
+                final_azimuth = self.get_geo_azimuth(pos)
                 self.request_line_creation.emit(final_azimuth)
                 self.stop_manual_picking()
             else:
                 center = self.rect().center()
-                dist = math.sqrt((event.pos().x() - center.x())**2 + (event.pos().y() - center.y())**2)
+                dist = math.sqrt((pos.x() - center.x())**2 + (pos.y() - center.y())**2)
                 
                 if abs(dist - self.ring_radius) < 15:
                     self.start_manual_picking()
                 elif dist < 45:
                     self.is_dragging_window = True
-                    self.drag_offset = event.globalPos() - self.pos()
+                    self.drag_offset = gpos - self.pos()
                     self.grabMouse()
                 else:
-                    idx = self.get_clicked_arm(event.pos())
+                    idx = self.get_clicked_arm(pos)
                     if idx != -1:
                         self.active_arm_index = idx
                         self.is_dragging_arm = True
                         self.grabMouse()
                     else:
                         self.is_dragging_window = True
-                        self.drag_offset = event.globalPos() - self.pos()
+                        self.drag_offset = gpos - self.pos()
                         self.grabMouse()
         self.update()
 
     def mouseMoveEvent(self, event):
-        center = self.rect().center()
-        dx = event.pos().x() - center.x()
-        dy = event.pos().y() - center.y()
+        pos = event.position().toPoint() if hasattr(event, "position") else event.pos()
+        gpos = event.globalPosition().toPoint() if hasattr(event, "globalPosition") else event.globalPos()
         
-        self.cursor_pos_local = event.pos()
-        self.current_cursor_azimuth = self.get_geo_azimuth(event.pos())
+        center = self.rect().center()
+        dx = pos.x() - center.x()
+        dy = pos.y() - center.y()
+        
+        self.cursor_pos_local = pos
+        self.current_cursor_azimuth = self.get_geo_azimuth(pos)
         
         if self.is_dragging_arm:
             self.arms[self.active_arm_index]['angle'] = self.current_cursor_azimuth
@@ -261,9 +276,8 @@ class ProtractorWidget(QWidget):
             self.arms[self.active_arm_index]['ratio'] = max(1.0, current_dist / self.ring_radius)
             
         elif self.is_dragging_window:
-            new_pos = event.globalPos() - self.drag_offset
+            new_pos = gpos - self.drag_offset
             
-            # Anti nyungsep (mengunci widget di area Map Canvas)
             if self.canvas:
                 try:
                     c_rect = self.canvas.rect()
@@ -287,6 +301,8 @@ class ProtractorWidget(QWidget):
         self.update()
 
     def mouseReleaseEvent(self, event):
+        pos = event.position().toPoint() if hasattr(event, "position") else event.pos()
+        
         if self.is_dragging_arm:
             self.save_settings()
             
@@ -296,22 +312,19 @@ class ProtractorWidget(QWidget):
         self.is_dragging_window = False
         self.is_dragging_arm = False
         
-        if event.button() == Qt.RightButton:
-            idx = self.get_clicked_arm(event.pos())
+        if event.button() == Qt_RightButton:
+            idx = self.get_clicked_arm(pos)
             if idx != -1:
-                self.show_arm_context_menu(event.pos(), idx)
+                self.show_arm_context_menu(pos, idx)
             else:
-                self.show_main_context_menu(event.pos())
+                self.show_main_context_menu(pos)
 
     def mouseDoubleClickEvent(self, event):
         self.start_manual_picking()
 
-    # =========================================
-    # Painting / Drawing
-    # ==========================================
     def paintEvent(self, event):
         p = QPainter(self)
-        p.setRenderHint(QPainter.Antialiasing)
+        p.setRenderHint(QPainter_Antialiasing)
         
         center = self.rect().center()
         radius = self.ring_radius
@@ -321,7 +334,7 @@ class ProtractorWidget(QWidget):
                 self.draw_arm_with_beam(p, center, radius, arm)
         
         if self.is_hovering_center:
-            p.setPen(Qt.NoPen)
+            p.setPen(Qt_NoPen)
             p.setBrush(QColor(255, 255, 255, 80))
             p.drawEllipse(center, 25, 25)
         
@@ -329,20 +342,18 @@ class ProtractorWidget(QWidget):
         p.drawLine(center.x() - 15, center.y(), center.x() + 15, center.y())
         p.drawLine(center.x(), center.y() - 15, center.x(), center.y() + 15)
         
-        p.setBrush(Qt.NoBrush)
+        p.setBrush(Qt_NoBrush)
         p.setPen(QPen(self.ring_color, self.ring_thickness))
         p.drawEllipse(center, radius, radius)
         
-        # Style 5 (Radar Rings)
         if self.current_style == 5:
-            radar_pen = QPen(self.ring_color, 1, Qt.DashLine)
+            radar_pen = QPen(self.ring_color, 1, Qt_DashLine)
             radar_pen.setColor(QColor(self.ring_color.red(), self.ring_color.green(), self.ring_color.blue(), 150))
             p.setPen(radar_pen)
             p.drawEllipse(center, int(radius / 3), int(radius / 3))
             p.drawEllipse(center, int(radius * 2 / 3), int(radius * 2 / 3))
             p.setPen(QPen(self.ring_color, self.ring_thickness))
 
-        # Looping Derajat
         for deg in range(0, 360, 2):
             rad = math.radians(deg - 90)
             t_len = 10 if deg % 10 == 0 else 5
@@ -362,19 +373,18 @@ class ProtractorWidget(QWidget):
 
             if self.current_style == 3 and deg % 10 == 0:
                 p.setPen(QPen(QColor(255, 255, 255, 80), 1))
-                p.drawLine(center, p2)
+                p.drawLine(QPointF(center), p2)
                 
             if self.current_style == 5 and deg in [45, 135, 225, 315]:
-                p.setPen(QPen(QColor(self.ring_color.red(), self.ring_color.green(), self.ring_color.blue(), 100), 1, Qt.DotLine))
-                p.drawLine(center, p2)
+                p.setPen(QPen(QColor(self.ring_color.red(), self.ring_color.green(), self.ring_color.blue(), 100), 1, Qt_DotLine))
+                p.drawLine(QPointF(center), p2)
 
             if deg % 10 == 0:
                 self.draw_curved_text(p, str(deg), center, radius - 18, deg)
 
-        # Garis Sumbu (Style 4 & 5)
         if self.current_style in [4, 5]:
             if self.current_style == 5:
-                p.setPen(QPen(QColor("red"), 1, Qt.DashLine))
+                p.setPen(QPen(QColor("red"), 1, Qt_DashLine))
             else:
                 p.setPen(QPen(QColor("red"), 1))
             p.drawLine(QPointF(center.x(), center.y() - radius), QPointF(center.x(), center.y() + radius))
@@ -389,16 +399,19 @@ class ProtractorWidget(QWidget):
         p.save()
         p.translate(center)
         p.rotate(angle)
-        font = QFont("Arial", self.font_size, QFont.Bold)
+        
+        font = QFont("Arial", self.font_size, QFont_Bold)
         p.setFont(font)
-        tw = p.fontMetrics().width(text)
+        
+        fm = p.fontMetrics()
+        tw = fm.horizontalAdvance(text) if hasattr(fm, 'horizontalAdvance') else fm.width(text)
         
         path = QPainterPath()
         path.addText(-tw / 2, -distance, font, text)
         
         p.setPen(QPen(self.text_stroke_color, 2))
         p.drawPath(path)
-        p.setPen(Qt.NoPen)
+        p.setPen(Qt_NoPen)
         p.setBrush(self.text_color)
         p.drawPath(path)
         p.restore()
@@ -418,12 +431,12 @@ class ProtractorWidget(QWidget):
             bc = QColor(color)
             bc.setAlpha(60)
             p.setBrush(bc)
-            p.setPen(Qt.NoPen)
+            p.setPen(Qt_NoPen)
             p.drawPie(QRectF(center.x() - arm_len, center.y() - arm_len, arm_len * 2, arm_len * 2), 
                       int((90 - angle + bw / 2) * 16), int(-bw * 16))
         
         p.setPen(QPen(color, self.bearing_thickness))
-        p.drawLine(center, tip)
+        p.drawLine(QPointF(center), tip)
         
         arrow = QPolygonF([
             tip,
@@ -439,22 +452,24 @@ class ProtractorWidget(QWidget):
             self.draw_outlined_text(p, f"{arm['label']} ({dist_str})", offset_x, offset_y, color)
 
     def draw_outlined_text(self, p, text, x, y, text_color):
-        font = QFont("Arial", self.font_size, QFont.Bold)
+        font = QFont("Arial", self.font_size, QFont_Bold)
         p.setFont(font)
-        tw = p.fontMetrics().width(text)
+        
+        fm = p.fontMetrics()
+        tw = fm.horizontalAdvance(text) if hasattr(fm, 'horizontalAdvance') else fm.width(text)
         
         path = QPainterPath()
         path.addText(x - tw / 2, y, font, text)
         
         p.setPen(QPen(self.text_stroke_color, 3))
         p.drawPath(path)
-        p.setPen(Qt.NoPen)
+        p.setPen(Qt_NoPen)
         p.setBrush(text_color)
         p.drawPath(path)
 
     def draw_preview_line(self, p, center):
         dist_str = self.get_real_distance(center, self.cursor_pos_local)
-        p.setPen(QPen(QColor("red"), 2, Qt.DashLine))
+        p.setPen(QPen(QColor("red"), 2, Qt_DashLine))
         p.drawLine(center, self.cursor_pos_local)
         
         dx = self.cursor_pos_local.x() - center.x()
@@ -465,13 +480,9 @@ class ProtractorWidget(QWidget):
         ty = self.cursor_pos_local.y() + 30 * math.sin(ang_rad)
         self.draw_outlined_text(p, f"{self.current_cursor_azimuth:.1f}° | {dist_str}", tx, ty, QColor("red"))
 
-    # ==========================================
-    # Menus & Actions
-    # ======================================-====
     def show_main_context_menu(self, pos):
         menu = QMenu(self)
         
-        # Style Menu
         m_visual = menu.addMenu("Protractor Style")
         styles = [
             (1, "1. Default"),
@@ -489,7 +500,6 @@ class ProtractorWidget(QWidget):
         
         menu.addSeparator()
 
-        # Bearing Menu
         m_b = menu.addMenu(self.t('menu_bearing'))
         m_b.addAction(QAction(self.t('show_all'), self, checkable=True, checked=self.show_arms, triggered=lambda: setattr(self, 'show_arms', not self.show_arms)))
         m_b.addAction(QAction(self.t('show_labels'), self, checkable=True, checked=self.show_bearing_labels, triggered=lambda: setattr(self, 'show_bearing_labels', not self.show_bearing_labels)))
@@ -497,12 +507,16 @@ class ProtractorWidget(QWidget):
         m_b.addSeparator()
         m_b.addAction(self.t('add_new'), self.add_new_arm)
         m_b.addAction(self.t('set_count'), self.ask_for_arm_count)
+        
+        m_b.addSeparator()
+        m_b.addAction(self.t('copy_clipboard'), self.copy_to_clipboard)
+        m_b.addAction(self.t('export_footprint'), lambda: self.request_footprint_creation.emit(self.arms, self.rect().center()))
+        
+        m_b.addSeparator()
         m_b.addAction(self.t('reset'), self.reset_arms)
 
-        # Manual Line
         menu.addAction(self.t('manual_line'), self.start_manual_picking)
         
-        # Visual Settings
         m_s = menu.addMenu(self.t('style_menu'))
         m_s.addAction(self.t('size_font'), lambda: self.set_visual_value("font_s"))
         m_s.addAction(self.t('thick_ring'), lambda: self.set_visual_value("ring_t"))
@@ -510,7 +524,6 @@ class ProtractorWidget(QWidget):
         m_s.addAction(self.t('color_ring'), lambda: self.pick_color('ring_color'))
         m_s.addAction(self.t('color_text'), lambda: self.pick_color('text_color'))
         
-        # Language
         m_l = menu.addMenu(self.t('lang_menu'))
         m_l.addAction("Indonesian", lambda: setattr(self, 'current_lang', 'ID'))
         m_l.addAction("English", lambda: setattr(self, 'current_lang', 'EN'))
@@ -519,7 +532,10 @@ class ProtractorWidget(QWidget):
         menu.addAction(self.t('help_menu'), self.show_help_dialog)
         menu.addAction(self.t('about_menu'), self.show_about_dialog)
         
-        menu.exec_(self.mapToGlobal(pos))
+        if hasattr(menu, 'exec'):
+            menu.exec(self.mapToGlobal(pos))
+        else:
+            menu.exec_(self.mapToGlobal(pos))
 
     def show_arm_context_menu(self, pos, idx):
         menu = QMenu(self)
@@ -530,11 +546,14 @@ class ProtractorWidget(QWidget):
         menu.addAction(self.t('change_beam'), lambda: self.set_arm_beamwidth(idx))
         menu.addSeparator()
         menu.addAction(self.t('delete_bearing'), lambda: self.delete_arm(idx))
-        menu.exec_(self.mapToGlobal(pos))
+        if hasattr(menu, 'exec'):
+            menu.exec(self.mapToGlobal(pos))
+        else:
+            menu.exec_(self.mapToGlobal(pos))
 
     def start_manual_picking(self):
         self.is_picking_azimuth = True
-        self.setCursor(Qt.CrossCursor)
+        self.setCursor(Qt_CrossCursor)
         self.grabMouse()
         self.update()
 
@@ -613,15 +632,52 @@ class ProtractorWidget(QWidget):
             self.save_settings()
             self.update()
 
-    # ===========================================
-    # Information Dialogs
-    # ==========================================
+    def copy_to_clipboard(self):
+        if not self.arms:
+            return
+            
+        lines = ["Sector\tAzimuth\tBeamwidth\tDistance"]
+        center = self.rect().center()
+        radius = self.ring_radius
+        
+        for arm in self.arms:
+            angle = arm['angle']
+            bw = arm.get('beamwidth', 45)
+            ratio = arm.get('ratio', 1.15)
+            arm_len = radius * ratio
+            
+            rad = math.radians(angle - 90)
+            tip_x = center.x() + arm_len * math.cos(rad)
+            tip_y = center.y() + arm_len * math.sin(rad)
+            dist_str = self.get_real_distance(center, QPoint(int(tip_x), int(tip_y)))
+            
+            lines.append(f"{arm['label']}\t{angle:.1f}\t{bw}\t{dist_str}")
+            
+        text = "\n".join(lines)
+        QApplication.clipboard().setText(text)
+        
+        msg = QMessageBox(self)
+        
+        
+        if self.current_lang == "ID":
+            msg.setWindowTitle("Informasi")
+            msg.setText("Data berhasil disalin ke Clipboard.\nAnda dapat menempelkan (Paste) data tersebut ke dalam aplikasi Excel atau Text Editor.")
+        else:
+            msg.setWindowTitle("Information")
+            msg.setText("Data successfully copied to the Clipboard.\nYou can now paste it into a Excel or Text Editor application.")
+            
+        msg.setIcon(MsgBox_Info)
+        msg.setStandardButtons(MsgBox_Ok)
+        if hasattr(msg, 'exec'):
+            msg.exec()
+        else:
+            msg.exec_()
+
     def show_help_dialog(self):
-        """Displays a quick instruction guide for the users based on selected language."""
         msg = QMessageBox(self)
         msg.setWindowTitle(self.t("help_menu"))
-        msg.setIcon(QMessageBox.Information)
-        msg.setTextFormat(Qt.RichText)
+        msg.setIcon(MsgBox_Info)
+        msg.setTextFormat(Qt_RichText)
         
         if self.current_lang == "ID":
             text = (
@@ -653,23 +709,24 @@ class ProtractorWidget(QWidget):
             )
         
         msg.setText(text)
-        msg.setStandardButtons(QMessageBox.Ok)
-        msg.exec_()
+        msg.setStandardButtons(MsgBox_Ok)
+        if hasattr(msg, 'exec'):
+            msg.exec()
+        else:
+            msg.exec_()
 
     def show_about_dialog(self):
-        """Displays the plugin information and support links."""
         msg = QMessageBox(self)
         msg.setWindowTitle(self.t("about_menu"))
-        msg.setIcon(QMessageBox.Information)
-        msg.setTextFormat(Qt.RichText)
+        msg.setIcon(MsgBox_Info)
+        msg.setTextFormat(Qt_RichText)
         
         text = (
             "<h3>Bearing Protractor</h3>"
-            "<b>Version:</b> 3.9.1<br>"
+            "<b>Version:</b> 3.9.2<br>"
             "<b>Author:</b> Jujun Junaedi<br><br>"
             "<b>☕ Support & Donate:</b><br>"
             "If this tool saves you hours of work, consider buying me a coffee!<br><br>"
-            
             
             "<table width='100%'><tr><td align='center'>"
             "<table cellpadding='5' cellspacing='0' border='0'>"
@@ -706,5 +763,8 @@ class ProtractorWidget(QWidget):
         )
         
         msg.setText(text)
-        msg.setStandardButtons(QMessageBox.Ok)
-        msg.exec_()
+        msg.setStandardButtons(MsgBox_Ok)
+        if hasattr(msg, 'exec'):
+            msg.exec()
+        else:
+            msg.exec_()

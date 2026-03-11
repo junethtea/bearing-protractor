@@ -3,7 +3,7 @@
 """
 ***************************************************************************
 * Plugin Name: Bearing Protractor
-* Version    : 3.9.0
+* Version    : 3.9.2
 * Author     : Jujun Junaedi
 * Email      : jujun.junaedi@outlook.com
 * Description: QGIS Floating Planning Tool for Azimuth & Distance
